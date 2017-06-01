@@ -1,5 +1,5 @@
-# InputfieldImageMarkdownCodeAdditionalFields
-Adds information to image fields. Helpful when using the markdown editor in text fields.
+# ProcessWire's Image Field Markdown Code Additional Fields
+Adds information to image fields. Helpful when using the markdown editor in text fields in [ProcessWire](https://processwire.com)
 
 ![](img/1.png)
 
