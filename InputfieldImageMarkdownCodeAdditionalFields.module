@@ -1,0 +1,269 @@
+<?php namespace ProcessWire;
+
+/**
+ * ProcessWire 'Image Field Markdown Code Additional Fields'  module
+ *
+ * Adds Markdown Code and Other Info to Image Fields.
+ * 
+ * This file is licensed under the MIT license
+ * 
+ * Copyright 2017 by Camilo Castro (clsource)
+ * https://ninjas.cl
+ *
+ */
+
+class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Module, ConfigurableModule 
+{
+
+  protected static $defaultConfigData = [
+		'enablePath' => true,
+		'enableUrl' => true, 
+		'enableMdPath' => true, 
+		'enableMdUrl' => true, 
+		'enableHtmlPath' => true,
+		'enableHtmlUrl' => true,
+		'includeCache' => false,
+  ]; 
+
+	/**
+	 * getModuleInfo is a module required by all modules to tell ProcessWire about them
+	 *
+	 * @return array
+	 *
+	 */
+	public static function getModuleInfo() 
+  {
+
+		return [
+
+			// The module's title, typically a little more descriptive than the class name
+			'title' => 'Image Field Markdown Code', 
+
+			// version number 
+			'version' => 100, 
+
+			// summary is brief description of what this module is
+			'summary' => 'Adds information to image fields. Helpful when using the markdown editor in text fields.',
+			
+			// Optional URL to more information about the module
+			'href' => 'https://github.com/NinjasCL/InputfieldImageMarkdownCodeAdditionalFields',
+
+			// singular=true: indicates that only one instance of the module is allowed.
+			// This is usually what you want for modules that attach hooks. 
+			'singular' => true, 
+
+			// autoload=true: indicates the module should be started with ProcessWire.
+			// This is necessary for any modules that attach runtime hooks, otherwise those
+			// hooks won't get attached unless some other code calls the module on it's own.
+			// Note that autoload modules are almost always also 'singular' (seen above).
+			'autoload' => true, 
+		
+			// Optional font-awesome icon name, minus the 'fa-' part
+			'icon' => 'picture-o', 
+
+      'requires' => ['ProcessWire>=3.0', 'InputfieldImage']
+    ];
+	}
+
+  /**
+  * Set the default config data
+  *
+  */
+	public function __construct() 
+  {
+		foreach(self::$defaultConfigData as $key => $value)
+    {
+			$this->set($key, $value); 
+		}
+	}
+
+	/**
+	 * Initialize the module
+	 *
+	 * ProcessWire calls this when the module is loaded. For 'autoload' modules, this will be called
+	 * when ProcessWire's API is ready. As a result, this is a good place to attach hooks. 
+	 *
+	 */
+	public function init()
+  {
+
+    $this->addHookAfter('InputfieldImage::renderAdditionalFields', $this, 'process');
+	}
+
+
+  /**
+  * Create the Configuration Page
+  */
+  public function getModuleConfigInputFields(array $data)
+  {
+
+    foreach(self::$defaultConfigData as $key => $value) 
+    {
+			if(!isset($data[$key])) $data[$key] = $value; 
+		}
+
+    $fields = $this->wire(new InputfieldWrapper());
+    
+    $f = $this->wire('modules')->get('InputfieldCheckbox');
+    $name = 'enablePath';
+		$f->attr('name', $name);
+		$f->attr('checked', $data[$name]);
+    $f->label = $this->_('Enable Path?');
+    $f->description = $this->_('Add Path Info to Image Additional Fields');
+
+    $fields->append($f);
+  
+    $f = $this->wire('modules')->get('InputfieldCheckbox');
+    $name = 'enableUrl';
+		$f->attr('name', $name);
+		$f->attr('checked', $data[$name]);
+    $f->label = $this->_('Enable Url?');
+    $f->description = $this->_('Add Url Info to Image Additional Fields');
+
+    $fields->append($f);
+
+    $f = $this->wire('modules')->get('InputfieldCheckbox');
+    $name = 'enableMdPath';
+		$f->attr('name', $name);
+		$f->attr('checked', $data[$name]);
+    $f->label = $this->_('Enable Markdown Path?');
+    $f->description = $this->_('Add Markdown Path Info to Image Additional Fields');
+
+    $fields->append($f);
+
+    $f = $this->wire('modules')->get('InputfieldCheckbox');
+    $name = 'enableMdUrl';
+		$f->attr('name', $name);
+		$f->attr('checked', $data[$name]);
+    $f->label = $this->_('Enable Markdown Url?');
+    $f->description = $this->_('Add Markdown Url Info to Image Additional Fields');
+
+    $fields->append($f);
+    
+    $f = $this->wire('modules')->get('InputfieldCheckbox');
+    $name = 'enableHtmlPath';
+		$f->attr('name', $name);
+		$f->attr('checked', $data[$name]);
+    $f->label = $this->_('Enable Html Path?');
+    $f->description = $this->_('Add Html Path Info to Image Additional Fields');
+
+    $fields->append($f);
+
+    $f = $this->wire('modules')->get('InputfieldCheckbox');
+    $name = 'enableHtmlUrl';
+		$f->attr('name', $name);
+		$f->attr('checked', $data[$name]);
+    $f->label = $this->_('Enable Html Url?');
+    $f->description = $this->_('Add Html Url Info to Image Additional Fields');
+
+    $fields->append($f);
+
+    $f = $this->wire('modules')->get('InputfieldCheckbox');
+    $name = 'includeCache';
+		$f->attr('name', $name);
+		$f->attr('checked', $data[$name]);
+    $f->label = $this->_('Include Cache Param?');
+    $f->description = $this->_('Add ?nc=timestamp Info to Paths and Urls.');
+
+    $fields->append($f);
+
+    return $fields;
+  }
+
+  /**
+  * Process the Hook to InputfieldImage::renderAdditionalFields
+  * @param $event 
+  */
+  public function process($event)
+  {
+    $pagefile = $event->arguments('pagefile');
+    
+    $data = $this->wire('modules')->getModuleConfigData($this);
+
+    $enablePath = (isset($data['enablePath']) ? $data['enablePath'] : true); 
+    $enableUrl = (isset($data['enableUrl']) ? $data['enableUrl'] : true); 
+    $enableMDPath = (isset($data['enableMdPath']) ? $data['enableMdPath'] : true); 
+    $enableMDUrl = (isset($data['enableMdUrl']) ? $data['enableMdUrl'] : true); 
+    $enableHtmlPath = (isset($data['enableHtmlPath']) ? $data['enableHtmlPath'] : true); 
+    $enableHtmlUrl = (isset($data['enableHtmlUrl']) ? $data['enableHtmlUrl'] : true); 
+    $includeCache = (isset($data['includeCache']) ? $data['includeCache'] : false); 
+
+    $event->return = $this->___render(
+      $pagefile, 
+      $enablePath, 
+      $enableUrl,
+      $enableMDPath, 
+      $enableMDUrl,
+      $enableHtmlPath, 
+      $enableHtmlUrl,
+      $includeCache 
+    );
+  }
+
+  /**
+  * Renders the Html for the Additional Fields Hook
+  * @param (Pagefile) $pagefile
+  * @param (bool) $enablePath
+  * @param (bool) $enableUrl 
+  * @param (bool) $enableMDPath 
+  * @param (bool) $enableMDUrl 
+  * @param (bool) $enableHtmlPath 
+  * @param (bool) $enableHtmlUrl 
+  * @param (bool) $includeCache 
+  */
+  public function ___render(
+    $pagefile, 
+    $enablePath = true, 
+    $enableUrl = true, 
+    $enableMDPath = true,
+    $enableMDUrl = true,
+    $enableHtmlPath = true,
+    $enableHtmlUrl = true,
+    $includeCache = false
+    )
+  {
+    
+    // remove trailing slash
+    $home = substr($this->wire('config')->urls->httpRoot, 0, -1);
+    $url = ($includeCache ? $pagefile->URL : $pagefile->url);
+
+    $html = '<ul>';
+
+    if($enablePath)
+    {
+      $html .= '<li><strong>' . $this->_('Path') . '</strong>: <code>' . $url . '</code></li>';
+    }
+    
+    if($enableUrl)
+    {
+      $html .= '<li><strong>' . $this->_('Url') . '</strong>: <code>' . $home . $url . '</code></li>';
+    }
+    
+    if($enableMDPath)
+    {
+      $html .= '<li><strong>' . $this->_('Markdown Path') . '</strong>: <code>![](' . $url . ')</code></li>';
+    }
+    
+    if($enableMDUrl)
+    {
+      $html .= '<li><strong>' . $this->_('Markdown Url') . '</strong>: <code>![](' . $home . $url . ')</code></li>';
+    }
+
+    if($enableHtmlPath)
+    {
+      $ahref =  htmlentities('<img src="' . $url . '">');
+      $html .= '<li><strong>' . $this->_('Html Path') . '</strong>: <code>' . $ahref . '</code></li>';
+    }
+
+    if($enableHtmlUrl)
+    {
+      $ahref = htmlentities('<img src="' . $home . $url . '">');
+      $html .= '<li><strong>' . $this->_('Html Url') . '</strong>: <code>' . $ahref . '</code></li>';
+    }
+
+    $html .= '</ul>';
+
+    return $html;
+  }
+
+}
