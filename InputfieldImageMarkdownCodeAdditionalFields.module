@@ -40,7 +40,7 @@ class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Mo
       'title' => 'Image Field Markdown Code',
 
       // version number
-      'version' => 101,
+      'version' => 102,
 
       // summary is brief description of what this module is
       'summary' => 'Adds information to image fields. Helpful when using the markdown editor in text fields.',
@@ -194,12 +194,14 @@ class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Mo
 
     $enablePath = (isset($data['enablePath']) ? $data['enablePath'] : true);
     $enableUrl = (isset($data['enableUrl']) ? $data['enableUrl'] : true);
+    
     $enableMDPath = (isset($data['enableMdPath']) ? $data['enableMdPath'] : true);
     $enableMDUrl = (isset($data['enableMdUrl']) ? $data['enableMdUrl'] : true);
     $enableHtmlPath = (isset($data['enableHtmlPath']) ? $data['enableHtmlPath'] : true);
+
     $enableHtmlUrl = (isset($data['enableHtmlUrl']) ? $data['enableHtmlUrl'] : true);
     $includeCache = (isset($data['includeCache']) ? $data['includeCache'] : false);
-    $includeButtons = (isset($data['includeButtons']) ? $data['includeButtons'] : false);
+    $includeButtons = (isset($data['includeButtons']) ? $data['includeButtons'] : true);
 
     $event->return = $this->___render(
       $pagefile,
