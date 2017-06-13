@@ -21,6 +21,7 @@ class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Mo
     'enableMdUrl' => true,
     'enableHtmlPath' => true,
     'enableHtmlUrl' => true,
+    'includeButtons' => true,
     'includeCache' => false,
   ];
 
@@ -39,7 +40,7 @@ class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Mo
       'title' => 'Image Field Markdown Code',
 
       // version number
-      'version' => 100,
+      'version' => 101,
 
       // summary is brief description of what this module is
       'summary' => 'Adds information to image fields. Helpful when using the markdown editor in text fields.',
@@ -55,7 +56,7 @@ class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Mo
       // This is necessary for any modules that attach runtime hooks, otherwise those
       // hooks won't get attached unless some other code calls the module on it's own.
       // Note that autoload modules are almost always also 'singular' (seen above).
-      'autoload' => true,
+      'autoload' => "template=admin",
 
       // Optional font-awesome icon name, minus the 'fa-' part
       'icon' => 'picture-o',
@@ -63,31 +64,35 @@ class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Mo
     ];
   }
 
+
   /**
-  * Set the default config data
+  * Initialize the module
+  *
+  * ProcessWire calls this when the module is loaded. For 'autoload' modules, this will be called
+  * when ProcessWire's API is ready. As a result, this is a good place to attach hooks.
   *
   */
-  public function __construct()
-  {
-    foreach(self::$defaultConfigData as $key => $value)
-    {
-      $this->set($key, $value);
-    }
-  }
-
-  /**
-    * Initialize the module
-    *
-    * ProcessWire calls this when the module is loaded. For 'autoload' modules, this will be called
-    * when ProcessWire's API is ready. As a result, this is a good place to attach hooks.
-    *
-    */
   public function init()
   {
-
     $this->addHookAfter('InputfieldImage::renderAdditionalFields', $this, 'process');
   }
 
+  public function ready()
+  {
+    $this->addHookAfter('ProcessPageEdit::execute', $this, 'addScript');
+  }
+  
+  public function addScript($event)
+  {
+    // return if ProcessPageEdit is being loaded via AJAX (image field)
+    if($this->config->ajax) return;
+
+    // add JS
+    $config = $this->config;
+    $info = $this->getModuleInfo();
+    $version = (int) $info['version'];
+    $config->scripts->add("{$config->urls->$this}{$this}.js?v={$version}");
+  }
 
   /**
   * Create the Configuration Page
@@ -165,6 +170,15 @@ class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Mo
 
     $fields->append($f);
 
+    $f = $this->wire('modules')->get('InputfieldCheckbox');
+    $name = 'includeButtons';
+    $f->attr('name', $name);
+    $f->attr('checked', $data[$name]);
+    $f->label = $this->_('Include Quick Copy Buttons?');
+    $f->description = $this->_('Adds buttons that enable quick copy paths and urls.');
+
+    $fields->append($f);
+
     return $fields;
   }
 
@@ -185,6 +199,7 @@ class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Mo
     $enableHtmlPath = (isset($data['enableHtmlPath']) ? $data['enableHtmlPath'] : true);
     $enableHtmlUrl = (isset($data['enableHtmlUrl']) ? $data['enableHtmlUrl'] : true);
     $includeCache = (isset($data['includeCache']) ? $data['includeCache'] : false);
+    $includeButtons = (isset($data['includeButtons']) ? $data['includeButtons'] : false);
 
     $event->return = $this->___render(
       $pagefile,
@@ -194,7 +209,8 @@ class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Mo
       $enableMDUrl,
       $enableHtmlPath,
       $enableHtmlUrl,
-      $includeCache
+      $includeCache,
+      $includeButtons
     );
   }
 
@@ -208,6 +224,7 @@ class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Mo
   * @param (bool) $enableHtmlPath
   * @param (bool) $enableHtmlUrl
   * @param (bool) $includeCache
+  * @param (bool) $includeButtons
   */
   public function ___render(
     $pagefile,
@@ -217,49 +234,108 @@ class InputfieldImageMarkdownCodeAdditionalFields extends WireData implements Mo
     $enableMDUrl = true,
     $enableHtmlPath = true,
     $enableHtmlUrl = true,
-    $includeCache = false
+    $includeCache = false,
+    $includeButtons = true
     )
   {
 
     // remove trailing slash
     $home = substr($this->wire('config')->urls->httpRoot, 0, -1);
-    $url = ($includeCache ? $pagefile->URL : $pagefile->url);
+    $path = ($includeCache ? $pagefile->URL : $pagefile->url);
+    $url = $home . $path;
 
-    $html = '<ul>';
+    $html = '<div id="InputfieldImageMarkdownCodeAdditionalFields"><ul>';
 
     if($enablePath)
     {
-      $html .= '<li><strong>' . $this->_('Path') . '</strong>: <code>' . $url . '</code></li>';
+      $html .= '<li class="InputfieldImageMarkdownCodeAdditionalFieldsItem">';
+
+      if($includeButtons)
+      {
+        $html .= '<small><button class="InputfieldImageMarkdownCodeAdditionalFieldsButton ui-button ui-corner-all ui-state-default" data-href="' . $path .'" data-type="string">' . $this->_('Copy') . '</button></small>&nbsp;';
+      }
+
+      $html .= '<strong>' . $this->_('Path') . '</strong>: <code>' . $path . '</code>';
+      
+      $html .= '</li>';
     }
 
     if($enableUrl)
     {
-      $html .= '<li><strong>' . $this->_('Url') . '</strong>: <code>' . $home . $url . '</code></li>';
+      $html .= '<li class="InputfieldImageMarkdownCodeAdditionalFieldsItem">';
+
+      if($includeButtons)
+      {
+        $html .= '<small><button class="InputfieldImageMarkdownCodeAdditionalFieldsButton ui-button ui-corner-all ui-state-default" data-href="' . $url .'" data-type="string">' . $this->_('Copy') . '</button></small>&nbsp;';
+      }
+
+      $html .= '<strong>' . $this->_('Url') . '</strong>: <code>' . $url . '</code>';
+      
+      $html .= '</li>';
     }
 
     if($enableMDPath)
     {
-      $html .= '<li><strong>' . $this->_('Markdown Path') . '</strong>: <code>![](' . $url . ')</code></li>';
+
+      $html .= '<li class="InputfieldImageMarkdownCodeAdditionalFieldsItem">';
+
+      if($includeButtons)
+      {
+        $html .= '<small><button class="InputfieldImageMarkdownCodeAdditionalFieldsButton ui-button ui-corner-all ui-state-default" data-href="' . $path .'" data-type="markdown">' . $this->_('Copy') . '</button></small>&nbsp;';
+      }
+
+      $html .= '<strong>' . $this->_('Markdown Path') . '</strong>: <code>![](' . $path . ')</code>';
+      
+      $html .= '</li>';
     }
 
     if($enableMDUrl)
     {
-      $html .= '<li><strong>' . $this->_('Markdown Url') . '</strong>: <code>![](' . $home . $url . ')</code></li>';
+      $html .= '<li class="InputfieldImageMarkdownCodeAdditionalFieldsItem">';
+
+      if($includeButtons)
+      {
+        $html .= '<small><button class="InputfieldImageMarkdownCodeAdditionalFieldsButton ui-button ui-corner-all ui-state-default" data-href="' . $url .'" data-type="markdown">' . $this->_('Copy') . '</button></small>&nbsp;';
+      }
+
+      $html .= '<strong>' . $this->_('Markdown Url') . '</strong>: <code>![](' . $url . ')</code>';
+
+      $html .= '</li>';
     }
 
     if($enableHtmlPath)
     {
-      $ahref =  htmlentities('<img src="' . $url . '">');
-      $html .= '<li><strong>' . $this->_('Html Path') . '</strong>: <code>' . $ahref . '</code></li>';
+      $ahref =  htmlentities('<img src="' . $path . '">');
+
+      $html .= '<li class="InputfieldImageMarkdownCodeAdditionalFieldsItem">';
+
+      if($includeButtons)
+      {
+        $html .= '<small><button class="InputfieldImageMarkdownCodeAdditionalFieldsButton ui-button ui-corner-all ui-state-default" data-href="' . $path .'" data-type="html">' . $this->_('Copy') . '</button></small>&nbsp;';
+      }
+
+      $html .= '<strong>' . $this->_('Html Path') . '</strong>: <code>' . $ahref . '</code>';
+      
+      $html .= '</li>';
     }
 
     if($enableHtmlUrl)
     {
-      $ahref = htmlentities('<img src="' . $home . $url . '">');
-      $html .= '<li><strong>' . $this->_('Html Url') . '</strong>: <code>' . $ahref . '</code></li>';
+      $ahref = htmlentities('<img src="' . $url . '">');
+
+      $html .= '<li class="InputfieldImageMarkdownCodeAdditionalFieldsItem">';
+
+      if($includeButtons)
+      {
+        $html .= '<small><button class="InputfieldImageMarkdownCodeAdditionalFieldsButton ui-button ui-corner-all ui-state-default" data-href="' . $url .'" data-type="html">' . $this->_('Copy') . '</button></small>&nbsp;';
+      }
+
+      $html .= '<strong>' . $this->_('Html Url') . '</strong>: <code>' . $ahref . '</code>';
+      
+      $html .= '</li>';
     }
 
-    $html .= '</ul>';
+    $html .= '</ul></div>';
 
     return $html;
   }
